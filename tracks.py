@@ -375,6 +375,22 @@ def addtracks(fname = None):
         
         mypcb = KicadPCB.load(filename)
         pcbThickness = float(mypcb.general.thickness)
+        origin_translation = FreeCAD.Vector(0, 0, 0)
+        pcb_placement = prefs.GetInt('pcb_placement')
+        if hasattr(mypcb, 'setup'):
+            if pcb_placement == 0 and hasattr(mypcb.setup, 'grid_origin'):
+                origin = mypcb.setup.grid_origin
+                origin_translation = FreeCAD.Vector(-origin[0], origin[1], 0)
+            elif pcb_placement == 1 and hasattr(mypcb.setup, 'aux_axis_origin'):
+                origin = mypcb.setup.aux_axis_origin
+                origin_translation = FreeCAD.Vector(-origin[0], origin[1], 0)
+
+        def place_on_board(obj):
+            placement = FreeCAD.Placement(
+                FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement)
+            placement.Base += origin_translation
+            obj.Placement = placement
+
         # print(pcbThickness,'mypcb.pcbThickness')
         #pcbThickness = float(pcb.general.thickness)
         #pcb.setLayer(LvlTopName)
@@ -695,7 +711,7 @@ def addtracks(fname = None):
                 
                 #stop
                 if topPads is not None:
-                    topPads.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(topPads)
                     #if (topPads.Shape.BoundBox.XLength > pcb_sk.Shape.BoundBox.XLength) or \
                     #        (topPads.Shape.BoundBox.YLength > pcb_sk.Shape.BoundBox.YLength):
                     
@@ -710,10 +726,10 @@ def addtracks(fname = None):
                         add_toberemoved.append(temp_tobedeleted)
                     topPads.Placement.Base.z+=2*deltaz
                 if topTracks is not None:
-                    topTracks.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(topTracks)
                     topTracks.Placement.Base.z+=deltaz
                 if topZones is not None:
-                    topZones.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(topZones)
                     topZones.Placement.Base.z+=deltaz
                 if len (FreeCAD.ActiveDocument.getObjectsByLabel('Board_Geoms'+ftname_sfx)) > 0:
                     if use_AppPart and not use_LinkGroups:
@@ -843,7 +859,7 @@ def addtracks(fname = None):
                     add_toberemoved.append([pcb_sk])
                 ### check if BBOx pcb > BBOx tracks
                 if botPads is not None:
-                    botPads.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(botPads)
                     #if (botPads.Shape.BoundBox.XLength > pcb_sk.Shape.BoundBox.XLength) or \
                     #        (botPads.Shape.BoundBox.YLength > pcb_sk.Shape.BoundBox.YLength):
                     if (botPads.Shape.BoundBox.XMax > pcb_sk.Shape.BoundBox.XMax) or \
@@ -855,10 +871,10 @@ def addtracks(fname = None):
                         add_toberemoved.append(temp_tobedeleted)
                     botPads.Placement.Base.z-=pcbThickness+2*deltaz
                 if botTracks is not None:
-                    botTracks.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(botTracks)
                     botTracks.Placement.Base.z-=pcbThickness+deltaz
                 if botZones is not None:
-                    botZones.Placement = FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement
+                    place_on_board(botZones)
                     botZones.Placement.Base.z-=pcbThickness+deltaz
                 if len (FreeCAD.ActiveDocument.getObjectsByLabel('Board_Geoms'+ftname_sfx)) > 0:
                     if use_AppPart and not use_LinkGroups:
