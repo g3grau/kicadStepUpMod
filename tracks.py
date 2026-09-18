@@ -176,19 +176,26 @@ def mkColor(*color):
 #        }
 
 def extrude_holes (holes,w):
+    solids = []
+    for wire in holes.Shape.Wires:
+        if not wire.isClosed():
+            continue
+        try:
+            solid = Part.Face(wire).extrude(FreeCAD.Vector(0,0,w))
+            solid.translate(FreeCAD.Vector(0,0,-w*0.5))
+            if not solid.isNull() and solid.isValid():
+                solids.append(solid)
+        except Exception:
+            continue
+    if not solids:
+        return None
 
-    FreeCAD.ActiveDocument.addObject("Part::Extrusion","Extrude_drills")
-    extrude_d_name=FreeCAD.ActiveDocument.ActiveObject.Name
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).Base = FreeCAD.ActiveDocument.getObject(holes.Name)
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).Dir = (0,0,w)
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).Solid = (True)
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).TaperAngle = (0)
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).Symmetric = True
-    FreeCADGui.ActiveDocument.getObject(holes.Name).Visibility = False
-    FreeCAD.ActiveDocument.getObject(extrude_d_name).Label = 'solid_drills'
-    extrude_drill_name=FreeCAD.ActiveDocument.ActiveObject.Name
-    recompute_active_object()
-    FreeCADGui.ActiveDocument.getObject(holes.Name).Visibility = False
+    cutter = FreeCAD.ActiveDocument.addObject('Part::Feature','Extrude_drills')
+    cutter.Label = 'solid_drills'
+    cutter.Shape = Part.makeCompound(solids)
+    cutter.ViewObject.Visibility = False
+    holes.ViewObject.Visibility = False
+    return cutter
 #
 
 def cut_fuzzy(base,tool,ftol):
@@ -485,13 +492,12 @@ def addtracks(fname = None):
                 #print(objsNum,len(FreeCAD.ActiveDocument.Objects))
                 holes=pcb.makeHoles(oval=True)
                 #print(objsNum,len(FreeCAD.ActiveDocument.Objects))
-                if (objsNum) < len(FreeCAD.ActiveDocument.Objects):
-                    drl = Draft.makeShape2DView(holes, FreeCAD.Vector(0.0, 0.0, 1.0))
-                    recompute_active_object()
-                    holesSk = Draft.makeSketch(FreeCAD.ActiveDocument.ActiveObject, autoconstraints=True)
-                    recompute_active_object()
-                    extrude_holes(holesSk,pcbThickness*3)
-                    holes_ = FreeCAD.ActiveDocument.ActiveObject
+                # makeHoles() may return a cached object created while pads
+                # were built. Object-count growth therefore does not tell us
+                # whether a usable drill shape exists.
+                if holes is not None:
+                    holes_ = extrude_holes(holes,pcbThickness*3)
+                if holes_ is not None:
                     try:
                         cut_fuzzy(tracks_,holes_,0.00006) #6e-5 fuzzy tolerance
                     except Exception:
@@ -500,9 +506,7 @@ def addtracks(fname = None):
                         raise
                     holes.ViewObject.Visibility = False
                     holes_.ViewObject.Visibility = False
-                    holesSk.ViewObject.Visibility = False
-                    drl.ViewObject.Visibility = False
-                    add_toberemoved.append([holes,holes_,holesSk,drl])
+                    add_toberemoved.append([holes,holes_])
                 say_time()
                 tracks=FreeCAD.ActiveDocument.ActiveObject
                 tracks.Placement.Base.z+=deltaz
@@ -816,13 +820,10 @@ def addtracks(fname = None):
                 tracksB_=FreeCAD.ActiveDocument.ActiveObject
                 objsNum = len(FreeCAD.ActiveDocument.Objects)
                 holesB=pcb.makeHoles(oval=True)
-                if (objsNum) < len(FreeCAD.ActiveDocument.Objects):
-                    drlB = Draft.makeShape2DView(holesB, FreeCAD.Vector(0.0, 0.0, 1.0))
-                    recompute_active_object()
-                    holesSkB = Draft.makeSketch(FreeCAD.ActiveDocument.ActiveObject, autoconstraints=True)
-                    recompute_active_object()
-                    extrude_holes(holesSkB,pcbThickness*3)
-                    holesB_ = FreeCAD.ActiveDocument.ActiveObject
+                # The bottom layer normally reuses the cached hole object.
+                if holesB is not None:
+                    holesB_ = extrude_holes(holesB,pcbThickness*3)
+                if holesB_ is not None:
                     try:
                         cut_fuzzy(tracksB_,holesB_,0.00006) #6e-5 fuzzy tolerance
                     except Exception:
@@ -831,9 +832,7 @@ def addtracks(fname = None):
                         raise
                     holesB.ViewObject.Visibility = False
                     holesB_.ViewObject.Visibility = False
-                    holesSkB.ViewObject.Visibility = False
-                    drlB.ViewObject.Visibility = False
-                    add_toberemoved.append([holesB,holesB_,holesSkB,drlB])
+                    add_toberemoved.append([holesB,holesB_])
                 say_time()
                 tracksB=FreeCAD.ActiveDocument.ActiveObject
                 tracksB.Placement.Base.z-=(pcbThickness + deltaz)
