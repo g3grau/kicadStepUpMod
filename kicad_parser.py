@@ -2068,10 +2068,10 @@ class KicadFcad:
                 self._log(
                     'combined pad area failed; using a direct Part compound',
                     level='warning')
-                shapes = [
-                    source.Shape for source in pad_sources
-                    if source.isValid() and not source.Shape.isNull()]
-                shape = Part.makeCompound(shapes)
+                faces = []
+                for source in pad_sources:
+                    if source.isValid() and not source.Shape.isNull():
+                        faces.extend(source.Shape.Faces)
 
                 hole_source = None
                 if hasattr(cut_result, 'Sources'):
@@ -2079,24 +2079,46 @@ class KicadFcad:
                     if len(sources) > 1:
                         hole_source = sources[-1]
                 if hole_source is not None:
-                    hole_faces = []
+                    hole_cutters = []
                     for wire in hole_source.Shape.Wires:
                         if not wire.isClosed():
                             continue
                         try:
-                            hole_faces.append(Part.Face(wire))
+                            cutter = Part.Face(wire).extrude(Vector(0,0,2))
+                            cutter.translate(Vector(0,0,-1))
+                            hole_cutters.append(cutter)
                         except Exception:
                             continue
-                    if hole_faces:
-                        try:
-                            cut_shape = shape.cut(
-                                Part.makeCompound(hole_faces), 0.00006)
-                            if not cut_shape.isNull() and cut_shape.isValid():
-                                shape = cut_shape
-                        except Exception as exc:
-                            self._log(
-                                'direct pad hole cut failed: {}', exc,
-                                level='warning')
+                    if hole_cutters:
+                        cut_faces = []
+                        for face in faces:
+                            box = face.BoundBox
+                            cutters = [
+                                cutter for cutter in hole_cutters
+                                if not (
+                                    cutter.BoundBox.XMax < box.XMin or
+                                    cutter.BoundBox.XMin > box.XMax or
+                                    cutter.BoundBox.YMax < box.YMin or
+                                    cutter.BoundBox.YMin > box.YMax)]
+                            if not cutters:
+                                cut_faces.append(face)
+                                continue
+                            try:
+                                cut = face
+                                for cutter in cutters:
+                                    cut = cut.cut(cutter, 0.00006)
+                                if not cut.isNull() and cut.isValid():
+                                    cut_faces.extend(cut.Faces)
+                                else:
+                                    cut_faces.append(face)
+                            except Exception as exc:
+                                self._log(
+                                    'direct pad hole cut failed: {}', exc,
+                                    level='warning')
+                                cut_faces.append(face)
+                        faces = cut_faces
+
+                shape = Part.makeCompound(faces)
 
                 objs.ViewObject.Visibility = False
                 objs = self._makeObject(
