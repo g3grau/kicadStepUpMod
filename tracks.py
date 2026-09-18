@@ -195,6 +195,8 @@ def extrude_holes (holes,w):
     cutter.Shape = Part.makeCompound(solids)
     cutter.ViewObject.Visibility = False
     holes.ViewObject.Visibility = False
+    FreeCAD.Console.PrintMessage(
+        '  direct drill cutter: {} solids\n'.format(len(solids)))
     return cutter
 #
 
@@ -690,6 +692,8 @@ def addtracks(fname = None):
                         zones = zones_cut
                         zones.Label = 'zones_with_holes'
                         zones.ViewObject.ShapeColor = copper_col
+                        FreeCAD.Console.PrintMessage(
+                            '  top zone drill cut applied\n')
                 zones.Placement.Base.z+=deltaz
                 new_obj = simple_cpy(zones,'topZones'+ftname_sfx)
                 say_time()
@@ -868,6 +872,8 @@ def addtracks(fname = None):
                         zonesB = zonesB_cut
                         zonesB.Label = 'zones_with_holes'
                         zonesB.ViewObject.ShapeColor = copper_col
+                        FreeCAD.Console.PrintMessage(
+                            '  bottom zone drill cut applied\n')
                 zonesB.Placement.Base.z = zonesB.Placement.Base.z - (pcbThickness + deltaz)
                 new_obj = simple_cpy(zonesB,'botZones'+ftname_sfx)
                 say_time()
