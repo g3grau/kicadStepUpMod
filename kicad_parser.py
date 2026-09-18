@@ -732,15 +732,34 @@ class KicadFcad:
     def setLayer(self,layer):
         self.layer_type, self.layer_name = self.findLayer(layer)
         self.layer = unquote(self.layer_name)
-        if self.layer_type <= 31:
+        if self._isCopperName(self.layer_name):
             self.layer_match = '*.Cu'
         else:
             self.layer_match = '*.{}'.format(self.layer.split('.')[-1])
 
+    @staticmethod
+    def _isCopperName(name):
+        return unquote(name).endswith('.Cu')
+
     def _copperLayers(self):
-        coppers = [ (int(t),unquote(self.pcb.layers[t][0])) \
-                        for t in self.pcb.layers if int(t)<=31]
-        coppers.sort(key=lambda x : x[0])
+        coppers = [(int(t), unquote(self.pcb.layers[t][0]))
+                   for t in self.pcb.layers
+                   if self._isCopperName(self.pcb.layers[t][0])]
+
+        def stack_order(item):
+            name = item[1]
+            if name == 'F.Cu':
+                return 0
+            if name == 'B.Cu':
+                return 1000
+            if name.startswith('In') and name.endswith('.Cu'):
+                try:
+                    return int(name[2:-3])
+                except ValueError:
+                    pass
+            return 500
+
+        coppers.sort(key=stack_order)
         return coppers
 
     def _initStackUp(self):
@@ -755,9 +774,10 @@ class KicadFcad:
                     last_copper = 0.0
                     for layer in stackup.layer:
                         layer_type, _ = self.findLayer(layer[0], 99)
+                        is_copper = self._isCopperName(layer[0])
                         t = getattr(layer, 'thickness',
-                                self.copper_thickness if layer_type<=32 else self.layer_thickness)
-                        if layer_type <= 31:
+                                self.copper_thickness if is_copper else self.layer_thickness)
+                        if is_copper:
                             last_copper = offset
                         # Some layer (e.g. dielectric) may have more than one
                         # thickness field. Add them all.
@@ -797,7 +817,7 @@ class KicadFcad:
             layer, name = self.findLayer(item[0], 99)
             self._stackup_map[unquote(name)] = item
             thickness = item[2]
-            if layer <= 31: # is copper layer
+            if self._isCopperName(name):
                 if accumulate is not None:
                     # counting intermediate layer(s) thickness
                     board_thickness += accumulate
@@ -2599,7 +2619,7 @@ class KicadFcad:
 
 
     def isBottomLayer(self):
-        return self.layer_type == 31
+        return self.layer == 'B.Cu'
 
 
     def makeCopper(self,shape_type='face',thickness=0.05,fit_arcs=True,
@@ -2631,7 +2651,7 @@ class KicadFcad:
             if not obj:
                 continue
             if shape_type=='solid':
-                ofs = offset if self.layer_type < 16 else -offset
+                ofs = -offset if self.isBottomLayer() else offset
                 self._place(obj,Vector(0,0,ofs))
             objs.append(obj)
 
