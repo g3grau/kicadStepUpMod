@@ -240,6 +240,19 @@ def cut_out_tracks (pcbsk,tracks,tname_sfx):
     FreeCADGui.ActiveDocument.getObject(tracks.Name).Visibility=False
     FreeCADGui.ActiveDocument.getObject(extrude.Name).Visibility=False
     FreeCAD.ActiveDocument.recompute()
+
+    common_shape = getattr(Common_Top, 'Shape', None)
+    common_valid = Common_Top.isValid() and common_shape is not None
+    if common_valid:
+        common_valid = not common_shape.isNull() and common_shape.isValid()
+    if not common_valid:
+        FreeCAD.Console.PrintWarning(
+            'pad crop against board outline failed; keeping uncropped pads\n')
+        FreeCADGui.ActiveDocument.getObject(tracks.Name).Visibility = True
+        temp_tobedeleted.append(Common_Top)
+        temp_tobedeleted.append(extrude)
+        temp_tobedeleted.append(shp_nw)
+        return tracks.Name, temp_tobedeleted
     
     # placing inside the container
     try:
