@@ -33,7 +33,7 @@ track path does not use it.
 
 Severity: high
 
-Status: fixed in commits `b5f6ac3` and `f06376c`
+Status: fixed in commits `f06376c` and `a3a76e7`
 
 The board loader subtracts `off_x` and `off_y` from coordinates while building
 the board geometry. Copper is generated independently from raw KiCad
@@ -108,16 +108,21 @@ being consistently named, colored, transformed, grouped, and combined with
 the corresponding copper layer. Coverage of graphic lines, arcs, rectangles,
 circles, and polygons is inconsistent.
 
-## 6. Filled zones exist but are not reached after the track exception
+## 6. Filled zones are lost during redundant drill subtraction
 
 Severity: medium
 
-Status: confirmed for the test board
+Status: fixed in commit `82517af`
 
-The test board has one two-layer zone with two F.Cu filled polygons and one
+The AMP15 board has one two-layer zone with three F.Cu filled polygons and one
 B.Cu filled polygon. Zone layer filtering already accepts plural `layers`.
-The immediate reason these fills are absent is that track generation throws
-before `makeZones()` is called.
+After the track fallback allowed execution to continue, the zone path still
+performed a second CAM subtraction of all 975 drill holes.
+
+KiCad's `filled_polygon` records already encode pad/via clearances, thermal
+geometry, and polygon holes. Without the redundant subtraction, FreeCAD 26.3
+creates three valid F.Cu zone faces for the test board. The Add Tracks command
+therefore now imports those filled polygons with `holes=False`.
 
 `makeZones()` also catches all polygon-generation exceptions and logs only a
 generic warning. Future syntax or geometry failures can therefore look like a
