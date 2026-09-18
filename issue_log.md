@@ -118,17 +118,19 @@ Boolean fill value, skipping zero-width strokes, and making faces per wire.
 
 Severity: medium
 
-Status: fixed in commit `82517af`
+Status: fixed in commits `82517af` and `cdfc7fd`
 
 The AMP15 board has one two-layer zone with three F.Cu filled polygons and one
 B.Cu filled polygon. Zone layer filtering already accepts plural `layers`.
 After the track fallback allowed execution to continue, the zone path still
 performed a second CAM subtraction of all 975 drill holes.
 
-KiCad's `filled_polygon` records already encode pad/via clearances, thermal
-geometry, and polygon holes. Without the redundant subtraction, FreeCAD 26.3
-creates three valid F.Cu zone faces for the test board. The Add Tracks command
-therefore now imports those filled polygons with `holes=False`.
+KiCad's `filled_polygon` records already encode pad/via clearances and thermal
+geometry, but the imported face still covers physical drill openings. Without
+the CAM subtraction, FreeCAD 26.3 creates valid zone faces. The Add Tracks
+command therefore imports those filled polygons with `holes=False`, then cuts
+the already constructed drill extrusion from the zone with a direct Part
+boolean. If that boolean fails, the uncut zone is retained with a warning.
 
 `makeZones()` also catches all polygon-generation exceptions and logs only a
 generic warning. Future syntax or geometry failures can therefore look like a
@@ -193,7 +195,66 @@ exact round ends; curved tracks are discretized into overlapping round-ended
 segments. Full Add Tracks validation, including the subsequent hole cut and
 final placement, remains required in the interactive FreeCAD runtime.
 
+## 9. A failed pad crop can hide every pad
+
+Severity: high with affected FreeCAD builds
+
+Status: fixed in commits `79bbf9f`, `cac81bd`, and `b97aa8a`
+
+On the LNA board, three custom pads fail in `Path::FeatureArea` with the same
+`No parent edge found` FreeCAD regression as the tracks. The later
+`Part::MultiCommon` used to crop the complete pad collection to the board
+outline then reports `Intersecting wires`. The importer previously copied the
+invalid result and hid the original pad object, making all regular SMD pads,
+custom pads, and via annuli disappear together.
+
+The crop now retains the uncropped pad collection when its result is invalid.
+Failed custom pad areas are rebuilt as independent direct Part faces, and a
+failed final CAM fusion is replaced by a valid direct Part compound. A
+targeted FreeCAD 26.3 test using the three reported LNA custom footprints
+produced a valid, non-null 42-face pad compound.
+
+The fallback drill subtraction can still be rejected by OpenCASCADE when the
+compound contains intersecting custom-pad faces. In that case the pads remain
+visible, but their drill openings need interactive validation.
+
+## 10. DNP is supported, but omission is opt-in
+
+Severity: low
+
+Status: existing behavior confirmed
+
+The board contains three footprints with `(attr smd dnp)`. The 3D-model
+importer detects this attribute, but only omits those models when the
+KiCadStepUp Black List contains `DNP` or `DNF`. This is intentionally an
+assembly-model choice: the PCB footprint and its copper pads remain present.
+
+For an assembly view, set the preference to `DNP;`. Making omission the
+unconditional default would be a policy change and has not been done here.
+
+## 11. LNA embedded-model checksum is inconsistent
+
+Severity: medium
+
+Status: board-data issue; not changed in this repository
+
+The LNA footprint references `kicad-embed://LNA_CHIP_V4.step` with zero
+offset, unit scale, and zero XYZ rotation. There is no negative model scale or
+saved mirror transform. However, the footprint-local embedded-file record has
+checksum `E11296F1B4FD90F1F0C3F54A8D9A17EF`, while the board's global embedded
+payload for the same filename has checksum
+`828E967DEAEBEA55F3A3E6D75D1C0E12`.
+
+That stale reference is consistent with KiCad showing a corrected cached
+model immediately after an update but returning to another embedded payload
+after reopening. The durable repair is to remove and re-embed the corrected
+model, or preferably reference a project-local STEP file and update the
+footprint library. A footprint-library update that reports "no change" does
+not replace an embedded payload whose URI and footprint definition are
+otherwise unchanged.
+
 ## Proposed incremental order
 
-1. Consolidate graphic copper into the normal per-layer copper path.
-2. Add KiCad 8, 9, and 10 regression fixtures and FreeCAD integration tests.
+1. Validate pad and zone drill openings in the interactive FreeCAD runtime.
+2. Consolidate graphic copper into the normal per-layer copper path.
+3. Add KiCad 8, 9, and 10 regression fixtures and FreeCAD integration tests.
