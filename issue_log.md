@@ -146,7 +146,8 @@ ordinary Python.
 
 Severity: high with affected FreeCAD builds
 
-Status: upstream regression identified; fallback applied in commit `834ea67`
+Status: upstream regression identified; track fallback applied in commit
+`07bb205`
 
 With `Hidra_RF_3x2_v3_AMP15.kicad_pcb`, track parsing completes and all 271
 track primitives are submitted for geometry generation. FreeCAD then reports
@@ -172,9 +173,14 @@ edge mapping. The issue was still open when this log was updated.
 The similar non-fatal `pad_area` exceptions and the fatal `track_area`
 exception are consistent with the same FreeCAD regression. A build predating
 the merge or a stable FreeCAD release is the cleanest comparison test.
-KiCadStepUp now retries only null `Path::FeatureArea` results with
-`FitArcs=False`. Areas which succeed normally retain fitted arcs. Live
-validation in the affected FreeCAD runtime remains required.
+Testing with FreeCAD 26.3.0 revision 20260916 showed that retrying an invalid
+area with `FitArcs=False` still raises the same parent-edge exception. The
+track importer now detects an invalid or null area and rebuilds the tracks as
+direct OpenCASCADE Part faces, bypassing CAM offsets. On the AMP15 board this
+produces a valid, non-null 286-face track compound. Straight tracks retain
+exact round ends; curved tracks are discretized into overlapping round-ended
+segments. Full Add Tracks validation, including the subsequent hole cut and
+final placement, remains required in the interactive FreeCAD runtime.
 
 ## Proposed incremental order
 
