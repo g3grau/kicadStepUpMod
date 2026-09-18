@@ -214,9 +214,11 @@ failed final CAM fusion is replaced by a valid direct Part compound. A
 targeted FreeCAD 26.3 test using the three reported LNA custom footprints
 produced a valid, non-null 42-face pad compound.
 
-The fallback drill subtraction can still be rejected by OpenCASCADE when the
-compound contains intersecting custom-pad faces. In that case the pads remain
-visible, but their drill openings need interactive validation.
+The fallback cuts drill openings one pad/via face at a time, considering only
+spatially overlapping drill solids. The targeted test produced 15 faces with
+inner wires. OpenCASCADE still rejected cuts on three overlapping custom-pad
+faces; those faces are retained uncut rather than dropping the pad collection.
+Full-board drill visibility still needs interactive validation.
 
 ## 10. DNP is supported, but omission is opt-in
 
