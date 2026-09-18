@@ -342,10 +342,6 @@ def addtracks(fname = None):
         skip_import_pads = prefs.GetBool('skip_import_pads')
         skip_import_tracks = prefs.GetBool('skip_import_tracks')
         pcb_color_pos = prefs.GetInt('pcb_color')
-        #pcb_color_values = [light_green,green,blue,red,purple,darkgreen,darkblue,lightblue,yellow,black,white]
-        assign_col=['#41c382','#5d917a','#2474cf','#ff4000','#9a1a85','#3c7f5d','#426091','#005fff','#fff956','#4d4d4d','#f0f0f0']
-        #print(pcb_color_pos)
-        trk_col = (assign_col[pcb_color_pos])
         if pcb_color_pos == 9:
             slk_col = '#2d2d2d'
         else:
@@ -412,10 +408,9 @@ def addtracks(fname = None):
         # <span style="color: #105e7d;">deep-sea blue</span></strong>, <strong><span style="color: #ff2f00;">Ferrari red</span></strong>, <strong><span style="color: #ffcc00;">sunshine yellow</span></strong>, <strong>slick black</strong>, <span style="color: #999999;"><strong>pure white</strong></span> and of course <strong><span style="color: #339966;">good</span></strong> <strong><span style="color: #339966;">ol’ green</span>
         # (r/255.0,g/255.0,b/255.0)
         pcb_col = pcb.colors
-        #zone_col = pcb_col['zone'][0]
-        #track_col = pcb_col['track'][0]
-        pcb_col['track'][0] = mkColor(trk_col)
-        pcb_col['zone'][0] = mkColor(trk_col)
+        copper_col = pcb_col['copper'][0]
+        pcb_col['track'][0] = copper_col
+        pcb_col['zone'][0] = copper_col
         # print(pcb_col['track'][0])
         # print(pcb_col['pad'][0])
         # print(pcb_col)
@@ -493,7 +488,7 @@ def addtracks(fname = None):
                 say_time()
                 tracks=FreeCAD.ActiveDocument.ActiveObject
                 tracks.Placement.Base.z+=deltaz
-                tracks.ViewObject.ShapeColor=mkColor(trk_col)
+                tracks.ViewObject.ShapeColor=copper_col
                 new_obj = simple_cpy(tracks,'topTracks'+ftname_sfx)
                 say_time()
                 # removesubtree([tracks])
@@ -797,7 +792,7 @@ def addtracks(fname = None):
                 say_time()
                 tracksB=FreeCAD.ActiveDocument.ActiveObject
                 tracksB.Placement.Base.z-=(pcbThickness + deltaz)
-                tracksB.ViewObject.ShapeColor=mkColor(trk_col)
+                tracksB.ViewObject.ShapeColor=copper_col
                 new_obj = simple_cpy(tracksB,'botTracks'+ftname_sfx)
                 say_time()
                 # removesubtree([tracks])
