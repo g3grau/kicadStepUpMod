@@ -639,9 +639,10 @@ def addtracks(fname = None):
         
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
-        #pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=True) #,prefix='')
+        # KiCad filled polygons already contain pad/via clearances and holes.
+        # Avoid a second CAM subtraction of every drill from the zone.
         if skip_import_zones != True:
-            pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=True) #,prefix='')
+            pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=False) #,prefix='')
         if FreeCAD.ActiveDocument is not None:
             if objsNum < len(FreeCAD.ActiveDocument.Objects):
                 say_time()
@@ -808,9 +809,10 @@ def addtracks(fname = None):
                 #stop
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
-        #pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=True) # ,prefix='')
+        # KiCad filled polygons already contain pad/via clearances and holes.
+        # Avoid a second CAM subtraction of every drill from the zone.
         if skip_import_zones != True:
-            pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=True) # ,prefix='')
+            pcb.makeZones(shape_type='face',thickness=0.05, fit_arcs=True,holes=False) # ,prefix='')
         if FreeCAD.ActiveDocument is not None:
             if objsNum < len(FreeCAD.ActiveDocument.Objects):
                 say_time()
