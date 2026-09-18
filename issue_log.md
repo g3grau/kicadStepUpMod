@@ -96,7 +96,7 @@ and appearance differ from the current workflow.
 
 Severity: medium
 
-Status: confirmed
+Status: F.Cu crash fixed in commit `e7e1338`; broader consolidation pending
 
 The test board contains a filled `gr_poly` on B.Cu. The Add Tracks command's
 manual graphic-polygon block only processes F.Cu, so the polygon is skipped.
@@ -107,6 +107,12 @@ Graphic copper is created through standalone `Part.show()` calls instead of
 being consistently named, colored, transformed, grouped, and combined with
 the corresponding copper layer. Coverage of graphic lines, arcs, rectangles,
 circles, and polygons is inconsistent.
+
+On the AMP15 board, the F.Cu polygon has Boolean `fill=True` and zero stroke
+width. The old path failed to recognize it as filled, constructed zero-width
+outline capsules, and raised `gp_Dir2d() - input vector has zero norm` before
+zone generation was reached. The immediate crash is fixed by accepting the
+Boolean fill value, skipping zero-width strokes, and making faces per wire.
 
 ## 6. Filled zones are lost during redundant drill subtraction
 
