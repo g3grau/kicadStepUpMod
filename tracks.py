@@ -551,15 +551,17 @@ def addtracks(fname = None):
                 k_test=pl.layers
             if unquote(k_test) == 'F.Cu':
                 pln=Part.Wire(make_gr_poly(pl))
-                if pl.fill == 'solid':
+                if pl.fill in (True, 'yes', 'solid'):
                     ws.append((pln))
                 if hasattr(pl,'stroke'):
                     width = pl.stroke.width
                 else:
                     width = pl.width
-                for e in pln.Edges:
-                    #aco=_wire(e,self.layer)
-                    wst.append(makeThickLine(makeVect([e.Vertexes[0].X,-e.Vertexes[0].Y]),makeVect([e.Vertexes[1].X,-e.Vertexes[1].Y]),width/2.0))
+                if width > 0:
+                    for e in pln.Edges:
+                        if e.Length > 0:
+                            #aco=_wire(e,self.layer)
+                            wst.append(makeThickLine(makeVect([e.Vertexes[0].X,-e.Vertexes[0].Y]),makeVect([e.Vertexes[1].X,-e.Vertexes[1].Y]),width/2.0))
                 # cp = Part.makeCompound(wst+ws)
                 # fc=Part.makeFace(cp,'Part::FaceMakerSimple')
                 # Part.show(fc)
@@ -577,8 +579,20 @@ def addtracks(fname = None):
                 for w in wst[1:]:
                     f.fuse(Part.makeFace(w,'Part::FaceMakerSimple'))
                 Part.show(f)
-            fc=Part.makeFace(Part.makeCompound(wst+ws),'Part::FaceMakerSimple')
-            Part.show(fc)
+            graphic_faces=[]
+            for wire in ws+wst:
+                try:
+                    graphic_faces.append(Part.makeFace(
+                        wire, 'Part::FaceMakerSimple'))
+                except Part.OCCError:
+                    FreeCAD.Console.PrintWarning(
+                        'skipping invalid F.Cu graphic polygon wire\n')
+            if graphic_faces:
+                Part.show(Part.makeCompound(graphic_faces))
+                graphic_copper = FreeCAD.ActiveDocument.ActiveObject
+                graphic_copper.Label = 'topGraphicCopper'+ftname_sfx
+                graphic_copper.ViewObject.ShapeColor = copper_col
+                place_on_board(graphic_copper, deltaz)
         print('TBD: gr_rect,gr_poly use stroke width (w makethickline)')
         #stop
         gr_rects=[]
