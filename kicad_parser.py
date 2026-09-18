@@ -1148,6 +1148,12 @@ class KicadFcad:
                     o.ViewObject.Visibility = False
 
             recomputeObj(ret)
+            if fit_arcs and ret.Shape.isNull():
+                self._log(
+                    'area {} is null with arc fitting; retrying without FitArcs',
+                    ret.Label, level='warning')
+                ret.FitArcs = False
+                recomputeObj(ret)
         else:
             try: # maui CAM.Area is missing from F1.0 ahead
                 ret = CAM.Area(Fill=fill,
