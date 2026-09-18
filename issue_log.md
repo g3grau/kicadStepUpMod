@@ -118,7 +118,7 @@ Boolean fill value, skipping zero-width strokes, and making faces per wire.
 
 Severity: medium
 
-Status: fixed in commits `82517af` and `cdfc7fd`
+Status: fixed in commits `82517af`, `cdfc7fd`, and `8bf7da7`
 
 The AMP15 board has one two-layer zone with three F.Cu filled polygons and one
 B.Cu filled polygon. Zone layer filtering already accepts plural `layers`.
@@ -131,6 +131,15 @@ the CAM subtraction, FreeCAD 26.3 creates valid zone faces. The Add Tracks
 command therefore imports those filled polygons with `holes=False`, then cuts
 the already constructed drill extrusion from the zone with a direct Part
 boolean. If that boolean fails, the uncut zone is retained with a warning.
+
+The first direct-cut implementation still skipped the cutter when
+`makeHoles()` returned the hole object cached during pad generation. It tested
+whether the document object count had increased, which is false for a cache
+hit. The importer now tests the returned hole object itself and constructs the
+drill solids directly from its closed wires, without the slow Draft projection
+and sketch conversion. A FreeCAD 26.3 geometry test cut two drill solids from
+a 100 mm2 face, producing the expected area of 97.4474559689583 mm2, three
+wires, and a valid non-null result.
 
 `makeZones()` also catches all polygon-generation exceptions and logs only a
 generic warning. Future syntax or geometry failures can therefore look like a
