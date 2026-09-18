@@ -1865,6 +1865,35 @@ class KicadFcad:
 
             return self._makeArea(objs, name, op=1,fill=True)
 
+        def _custom_face(obj,label):
+            result = _face(obj,'pad',label)
+            if result.isValid() and not result.Shape.isNull():
+                return result
+
+            faces = []
+            for wire in obj.Wires:
+                if not wire.isClosed():
+                    continue
+                try:
+                    face = Part.Face(wire)
+                except Exception:
+                    continue
+                if not face.isNull() and face.isValid():
+                    faces.append(face)
+
+            if not faces:
+                return result
+
+            self._log(
+                'pad area {} failed; using direct Part faces',
+                result.Label, level='warning')
+            result.ViewObject.Visibility = False
+            direct = self._makeObject(
+                'Part::Feature', 'pad_direct', label,
+                'Shape', Part.makeCompound(faces))
+            self.setColor(direct,'pad')
+            return direct
+
         _solid = _face
 
         try:
@@ -1946,11 +1975,15 @@ class KicadFcad:
                 if wp != '': # maui
                     wp.translate(at)
                 if not self.merge_pads:
-                    pads.append(func(w,'pad',
-                        '{}#{}#{}#{}#{}'.format(i,j,p[0],ref,self.netName(p))))
+                    label = '{}#{}#{}#{}#{}'.format(
+                        i,j,p[0],ref,self.netName(p))
+                    if shape == 'custom' and shape_type == 'face':
+                        pads.append(_custom_face(w,label))
+                    else:
+                        pads.append(func(w,'pad',label))
                     if wp != '': # maui
                         pads.append(func(wp,'pad',
-                            '{}#{}#{}#{}#{}'.format(i,j,p[0],ref,self.netName(p))))
+                            label))
                 else:
                     pads.append(w)
 
