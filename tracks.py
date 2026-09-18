@@ -375,20 +375,10 @@ def addtracks(fname = None):
         
         mypcb = KicadPCB.load(filename)
         pcbThickness = float(mypcb.general.thickness)
-        origin_translation = FreeCAD.Vector(0, 0, 0)
-        pcb_placement = prefs.GetInt('pcb_placement')
-        if hasattr(mypcb, 'setup'):
-            if pcb_placement == 0 and hasattr(mypcb.setup, 'grid_origin'):
-                origin = mypcb.setup.grid_origin
-                origin_translation = FreeCAD.Vector(-origin[0], origin[1], 0)
-            elif pcb_placement == 1 and hasattr(mypcb.setup, 'aux_axis_origin'):
-                origin = mypcb.setup.aux_axis_origin
-                origin_translation = FreeCAD.Vector(-origin[0], origin[1], 0)
 
         def place_on_board(obj, z_offset=0):
             placement = FreeCAD.Placement(
                 FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement)
-            placement.Base += origin_translation
             placement.Base.z += z_offset
             obj.Placement = placement
 
