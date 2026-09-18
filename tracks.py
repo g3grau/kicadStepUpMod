@@ -385,10 +385,11 @@ def addtracks(fname = None):
                 origin = mypcb.setup.aux_axis_origin
                 origin_translation = FreeCAD.Vector(-origin[0], origin[1], 0)
 
-        def place_on_board(obj):
+        def place_on_board(obj, z_offset=0):
             placement = FreeCAD.Placement(
                 FreeCAD.ActiveDocument.getObject('Pcb'+ftname_sfx).Placement)
             placement.Base += origin_translation
+            placement.Base.z += z_offset
             obj.Placement = placement
 
         # print(pcbThickness,'mypcb.pcbThickness')
@@ -467,6 +468,7 @@ def addtracks(fname = None):
                 pads.ViewObject.Visibility = False
                 add_toberemoved.append([pads])
                 topPads = new_obj
+                place_on_board(topPads, 2*deltaz)
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
         # pcb.makeTracks(shape_type='face',fit_arcs=True,thickness=0.05,holes=True) #,prefix='')
@@ -487,7 +489,12 @@ def addtracks(fname = None):
                     recompute_active_object()
                     extrude_holes(holesSk,pcbThickness*3)
                     holes_ = FreeCAD.ActiveDocument.ActiveObject
-                    cut_fuzzy(tracks_,holes_,0.00006) #6e-5 fuzzy tolerance
+                    try:
+                        cut_fuzzy(tracks_,holes_,0.00006) #6e-5 fuzzy tolerance
+                    except Exception:
+                        place_on_board(tracks_, deltaz)
+                        tracks_.ViewObject.Visibility = True
+                        raise
                     holes.ViewObject.Visibility = False
                     holes_.ViewObject.Visibility = False
                     holesSk.ViewObject.Visibility = False
@@ -504,6 +511,7 @@ def addtracks(fname = None):
                 tracks_.ViewObject.Visibility = False
                 add_toberemoved.append([tracks,tracks_])
                 topTracks = new_obj
+                place_on_board(topTracks, deltaz)
                 #stop
         
         if 0:
@@ -655,6 +663,7 @@ def addtracks(fname = None):
                 zones.ViewObject.Visibility = False
                 add_toberemoved.append([zones])
                 topZones = new_obj
+                place_on_board(topZones, deltaz)
             if len (FreeCAD.ActiveDocument.getObjectsByLabel('Pcb'+ftname_sfx)) >0:
                 #PCB_Sketch_5737
                 # pcb_sk = FreeCAD.ActiveDocument.getObject('PCB_Sketch'+ftname_sfx)
@@ -711,7 +720,6 @@ def addtracks(fname = None):
                 
                 #stop
                 if topPads is not None:
-                    place_on_board(topPads)
                     #if (topPads.Shape.BoundBox.XLength > pcb_sk.Shape.BoundBox.XLength) or \
                     #        (topPads.Shape.BoundBox.YLength > pcb_sk.Shape.BoundBox.YLength):
                     
@@ -724,13 +732,6 @@ def addtracks(fname = None):
                         print('TBD pcb sketch open due to edgecuts in fp')
                         # Part.show(App.ActiveDocument.Cut.Shape.Faces[64].OuterWire)
                         add_toberemoved.append(temp_tobedeleted)
-                    topPads.Placement.Base.z+=2*deltaz
-                if topTracks is not None:
-                    place_on_board(topTracks)
-                    topTracks.Placement.Base.z+=deltaz
-                if topZones is not None:
-                    place_on_board(topZones)
-                    topZones.Placement.Base.z+=deltaz
                 if len (FreeCAD.ActiveDocument.getObjectsByLabel('Board_Geoms'+ftname_sfx)) > 0:
                     if use_AppPart and not use_LinkGroups:
                         if topPads is not None:
@@ -773,6 +774,7 @@ def addtracks(fname = None):
                 padsB.ViewObject.Visibility = False
                 add_toberemoved.append([padsB])
                 botPads = new_obj
+                place_on_board(botPads, -(pcbThickness + 2*deltaz))
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
         # pcb.makeTracks(shape_type='face',fit_arcs=True,thickness=0.05,holes=True,prefix='')
@@ -790,7 +792,12 @@ def addtracks(fname = None):
                     recompute_active_object()
                     extrude_holes(holesSkB,pcbThickness*3)
                     holesB_ = FreeCAD.ActiveDocument.ActiveObject
-                    cut_fuzzy(tracksB_,holesB_,0.00006) #6e-5 fuzzy tolerance
+                    try:
+                        cut_fuzzy(tracksB_,holesB_,0.00006) #6e-5 fuzzy tolerance
+                    except Exception:
+                        place_on_board(tracksB_, -(pcbThickness + deltaz))
+                        tracksB_.ViewObject.Visibility = True
+                        raise
                     holesB.ViewObject.Visibility = False
                     holesB_.ViewObject.Visibility = False
                     holesSkB.ViewObject.Visibility = False
@@ -807,6 +814,7 @@ def addtracks(fname = None):
                 tracksB_.ViewObject.Visibility = False
                 add_toberemoved.append([tracksB,tracksB_])
                 botTracks = new_obj
+                place_on_board(botTracks, -(pcbThickness + deltaz))
                 #stop
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
@@ -824,6 +832,7 @@ def addtracks(fname = None):
                 zonesB.ViewObject.Visibility = False
                 add_toberemoved.append([zonesB])
                 botZones = new_obj
+                place_on_board(botZones, -(pcbThickness + deltaz))
             if len (FreeCAD.ActiveDocument.getObjectsByLabel('Pcb'+ftname_sfx)) >0:
                 #PCB_Sketch_5737
                 # pcb_sk = FreeCAD.ActiveDocument.getObject('PCB_Sketch'+ftname_sfx)
@@ -859,7 +868,6 @@ def addtracks(fname = None):
                     add_toberemoved.append([pcb_sk])
                 ### check if BBOx pcb > BBOx tracks
                 if botPads is not None:
-                    place_on_board(botPads)
                     #if (botPads.Shape.BoundBox.XLength > pcb_sk.Shape.BoundBox.XLength) or \
                     #        (botPads.Shape.BoundBox.YLength > pcb_sk.Shape.BoundBox.YLength):
                     if (botPads.Shape.BoundBox.XMax > pcb_sk.Shape.BoundBox.XMax) or \
@@ -869,13 +877,6 @@ def addtracks(fname = None):
                         botPads_cut_Name, temp_tobedeleted = cut_out_tracks(pcb_sk,botPads,ftname_sfx)
                         botPads = FreeCAD.ActiveDocument.getObject(botPads_cut_Name)
                         add_toberemoved.append(temp_tobedeleted)
-                    botPads.Placement.Base.z-=pcbThickness+2*deltaz
-                if botTracks is not None:
-                    place_on_board(botTracks)
-                    botTracks.Placement.Base.z-=pcbThickness+deltaz
-                if botZones is not None:
-                    place_on_board(botZones)
-                    botZones.Placement.Base.z-=pcbThickness+deltaz
                 if len (FreeCAD.ActiveDocument.getObjectsByLabel('Board_Geoms'+ftname_sfx)) > 0:
                     if use_AppPart and not use_LinkGroups:
                         if botPads is not None:
