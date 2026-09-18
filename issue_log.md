@@ -142,6 +142,40 @@ verification must be performed in the FreeCAD application or another FreeCAD
 runtime. Pure parser and coordinate-helper behavior can still be tested with
 ordinary Python.
 
+## 8. FreeCAD 0.26 development builds can fail in `Path.Area`
+
+Severity: high with affected FreeCAD builds
+
+Status: upstream regression identified; KiCadStepUp workaround not yet applied
+
+With `Hidra_RF_3x2_v3_AMP15.kicad_pcb`, track parsing completes and all 271
+track primitives are submitted for geometry generation. FreeCAD then reports
+errors such as:
+
+```text
+No parent edge found for z=(4509,4781) hits=(0,0)
+FaceMakerBullseye failed: Wire is not closed.
+```
+
+The resulting `Path::FeatureArea` can have a null Shape. The later drill-hole
+cut in `tracks.cut_fuzzy()` consequently raises `ValueError: Null input shape`.
+The cut error is downstream damage rather than the original failure, so merely
+skipping the cut would hide missing copper.
+
+The exact `No parent edge found` failure is tracked by FreeCAD issue
+[#32677](https://github.com/FreeCAD/FreeCAD/issues/32677). It followed CAM pull
+request [#30169](https://github.com/FreeCAD/FreeCAD/pull/30169), merged on
+2026-09-14, which replaced Clipper curve discretization and fitting. Upstream
+discussion identifies dropped very short edges as one cause of broken parent
+edge mapping. The issue was still open when this log was updated.
+
+The similar non-fatal `pad_area` exceptions and the fatal `track_area`
+exception are consistent with the same FreeCAD regression. A build predating
+the merge or a stable FreeCAD release is the cleanest comparison test.
+Disabling `FitArcs` for copper generation is a candidate temporary workaround,
+but it changes curve output and requires validation in the affected FreeCAD
+runtime before adoption.
+
 ## Proposed incremental order
 
 1. Accept singular and plural track layer declarations without changing the
