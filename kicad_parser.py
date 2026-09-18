@@ -2053,13 +2053,55 @@ class KicadFcad:
                 count-skip_count+len(self.pcb.via)-via_skip)
 
         if objs:
+            pad_sources = list(objs)
             objs = self._cutHoles(objs,holes,'pads',fit_arcs=fit_arcs)
+            cut_result = objs
             if shape_type=='solid':
                 objs = self._makeSolid(objs,'pads', thickness,
                                     fit_arcs = fit_arcs)
             else:
                 objs = self._makeCompound(objs,'pads',
                                     fuse=True,fit_arcs=fit_arcs)
+
+            if shape_type == 'face' and (
+                    not objs.isValid() or objs.Shape.isNull()):
+                self._log(
+                    'combined pad area failed; using a direct Part compound',
+                    level='warning')
+                shapes = [
+                    source.Shape for source in pad_sources
+                    if source.isValid() and not source.Shape.isNull()]
+                shape = Part.makeCompound(shapes)
+
+                hole_source = None
+                if hasattr(cut_result, 'Sources'):
+                    sources = list(cut_result.Sources)
+                    if len(sources) > 1:
+                        hole_source = sources[-1]
+                if hole_source is not None:
+                    hole_faces = []
+                    for wire in hole_source.Shape.Wires:
+                        if not wire.isClosed():
+                            continue
+                        try:
+                            hole_faces.append(Part.Face(wire))
+                        except Exception:
+                            continue
+                    if hole_faces:
+                        try:
+                            cut_shape = shape.cut(
+                                Part.makeCompound(hole_faces), 0.00006)
+                            if not cut_shape.isNull() and cut_shape.isValid():
+                                shape = cut_shape
+                        except Exception as exc:
+                            self._log(
+                                'direct pad hole cut failed: {}', exc,
+                                level='warning')
+
+                objs.ViewObject.Visibility = False
+                objs = self._makeObject(
+                    'Part::Feature', 'pads_direct', 'direct',
+                    'Shape', shape)
             self.setColor(objs,'pad')
 
         self._popLog('pads done')
