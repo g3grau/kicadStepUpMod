@@ -199,7 +199,7 @@ final placement, remains required in the interactive FreeCAD runtime.
 
 Severity: high with affected FreeCAD builds
 
-Status: fixed in commits `79bbf9f`, `cac81bd`, and `b97aa8a`
+Status: fixed in commits `79bbf9f`, `cac81bd`, `b97aa8a`, and `8071af5`
 
 On the LNA board, three custom pads fail in `Path::FeatureArea` with the same
 `No parent edge found` FreeCAD regression as the tracks. The later
