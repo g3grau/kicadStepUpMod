@@ -193,7 +193,11 @@ def extrude_holes (holes,w):
 
 def cut_fuzzy(base,tool,ftol):
 
-    Part.show(base.Shape.cut(tool.Shape, ftol))
+    result = base.Shape.cut(tool.Shape, ftol)
+    if result.isNull() or not result.isValid():
+        raise ValueError('boolean cut produced an invalid shape')
+    Part.show(result)
+    return FreeCAD.ActiveDocument.ActiveObject
     
 #
 
@@ -447,6 +451,7 @@ def addtracks(fname = None):
         topPads = None
         topTracks = None
         topZones = None
+        holes_ = None
         deltaz = 0.01 #10 micron
         add_toberemoved = []
         if FreeCAD.ActiveDocument is not None:
@@ -669,6 +674,18 @@ def addtracks(fname = None):
             if objsNum < len(FreeCAD.ActiveDocument.Objects):
                 say_time()
                 zones=FreeCAD.ActiveDocument.ActiveObject
+                if holes_ is not None:
+                    try:
+                        zones_cut = cut_fuzzy(zones,holes_,0.00006)
+                    except Exception as exc:
+                        FreeCAD.Console.PrintWarning(
+                            'zone hole cut failed; keeping uncut zones: {}\n'.format(exc))
+                    else:
+                        zones.ViewObject.Visibility = False
+                        add_toberemoved.append([zones])
+                        zones = zones_cut
+                        zones.Label = 'zones_with_holes'
+                        zones.ViewObject.ShapeColor = copper_col
                 zones.Placement.Base.z+=deltaz
                 new_obj = simple_cpy(zones,'topZones'+ftname_sfx)
                 say_time()
@@ -769,6 +786,7 @@ def addtracks(fname = None):
         botPads = None
         botTracks = None
         botZones = None
+        holesB_ = None
         if FreeCAD.ActiveDocument is not None:
             objsNum = len(FreeCAD.ActiveDocument.Objects)
         else:
@@ -839,6 +857,18 @@ def addtracks(fname = None):
             if objsNum < len(FreeCAD.ActiveDocument.Objects):
                 say_time()
                 zonesB=FreeCAD.ActiveDocument.ActiveObject
+                if holesB_ is not None:
+                    try:
+                        zonesB_cut = cut_fuzzy(zonesB,holesB_,0.00006)
+                    except Exception as exc:
+                        FreeCAD.Console.PrintWarning(
+                            'zone hole cut failed; keeping uncut zones: {}\n'.format(exc))
+                    else:
+                        zonesB.ViewObject.Visibility = False
+                        add_toberemoved.append([zonesB])
+                        zonesB = zonesB_cut
+                        zonesB.Label = 'zones_with_holes'
+                        zonesB.ViewObject.ShapeColor = copper_col
                 zonesB.Placement.Base.z = zonesB.Placement.Base.z - (pcbThickness + deltaz)
                 new_obj = simple_cpy(zonesB,'botZones'+ftname_sfx)
                 say_time()
