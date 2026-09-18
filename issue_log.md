@@ -8,7 +8,7 @@ This log records the findings from investigating copper import with
 
 Severity: high
 
-Status: confirmed
+Status: fixed in commit `d650dbf`
 
 The first routed segment in the test board is a solder-mask-exposed track and
 uses:
@@ -33,7 +33,7 @@ track path does not use it.
 
 Severity: high
 
-Status: confirmed
+Status: fixed in commits `b5f6ac3` and `f06376c`
 
 The board loader subtracts `off_x` and `off_y` from coordinates while building
 the board geometry. Copper is generated independently from raw KiCad
@@ -48,7 +48,7 @@ test board's `(grid_origin 53 45)`, raw copper is displaced by approximately
 
 Severity: high for general copper/stackup import
 
-Status: confirmed
+Status: fixed in commit `9ab144b`
 
 KiCad 8 and earlier assigned copper layers contiguously from `F.Cu = 0` to
 `B.Cu = 31`, followed by technical and user layers. KiCad reorganized the
@@ -142,11 +142,11 @@ verification must be performed in the FreeCAD application or another FreeCAD
 runtime. Pure parser and coordinate-helper behavior can still be tested with
 ordinary Python.
 
-## 8. FreeCAD 0.26 development builds can fail in `Path.Area`
+## 8. Recent FreeCAD development builds can fail in `Path.Area`
 
 Severity: high with affected FreeCAD builds
 
-Status: upstream regression identified; KiCadStepUp workaround not yet applied
+Status: upstream regression identified; fallback applied in commit `834ea67`
 
 With `Hidra_RF_3x2_v3_AMP15.kicad_pcb`, track parsing completes and all 271
 track primitives are submitted for geometry generation. FreeCAD then reports
@@ -172,17 +172,11 @@ edge mapping. The issue was still open when this log was updated.
 The similar non-fatal `pad_area` exceptions and the fatal `track_area`
 exception are consistent with the same FreeCAD regression. A build predating
 the merge or a stable FreeCAD release is the cleanest comparison test.
-Disabling `FitArcs` for copper generation is a candidate temporary workaround,
-but it changes curve output and requires validation in the affected FreeCAD
-runtime before adoption.
+KiCadStepUp now retries only null `Path::FeatureArea` results with
+`FitArcs=False`. Areas which succeed normally retain fitted arcs. Live
+validation in the affected FreeCAD runtime remains required.
 
 ## Proposed incremental order
 
-1. Accept singular and plural track layer declarations without changing the
-   existing output structure.
-2. Apply the same XY origin offset to generated copper that the board loader
-   applies to board geometry.
-3. Replace numeric copper-layer classification with canonical-name/type based
-   classification throughout stackup and all-layer import.
-4. Consolidate graphic copper into the normal per-layer copper path.
-5. Add KiCad 8, 9, and 10 regression fixtures and FreeCAD integration tests.
+1. Consolidate graphic copper into the normal per-layer copper path.
+2. Add KiCad 8, 9, and 10 regression fixtures and FreeCAD integration tests.
