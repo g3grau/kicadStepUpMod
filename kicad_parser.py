@@ -1148,9 +1148,9 @@ class KicadFcad:
                     o.ViewObject.Visibility = False
 
             recomputeObj(ret)
-            if fit_arcs and ret.Shape.isNull():
+            if fit_arcs and (not ret.isValid() or ret.Shape.isNull()):
                 self._log(
-                    'area {} is null with arc fitting; retrying without FitArcs',
+                    'area {} failed with arc fitting; retrying without FitArcs',
                     ret.Label, level='warning')
                 ret.FitArcs = False
                 recomputeObj(ret)
@@ -2449,6 +2449,60 @@ class KicadFcad:
                 else:
                     label = '{}#{}'.format(width,name)
                 objs.append(func(edges,label=label))
+
+        area_failed = any(
+            hasattr(obj, 'isValid') and
+            (not obj.isValid() or obj.Shape.isNull())
+            for obj in objs)
+        if area_failed and shape_type == 'face':
+            self._log(
+                'Path area failed; rebuilding tracks as direct Part faces',
+                level='warning')
+            for obj in objs:
+                if hasattr(obj, 'ViewObject'):
+                    obj.ViewObject.Visibility = False
+
+            faces = []
+            for sss in tracks.values():
+                for width, ss in sss.items():
+                    radius = width * 0.5
+                    for tp, s in ss:
+                        if tp == 'segment':
+                            if s.start != s.end:
+                                faces.append(Part.Face(makeThickLine(
+                                    makeVect(s.start), makeVect(s.end), radius)))
+                            continue
+
+                        if s.start == s.mid:
+                            continue
+                        if s.start != s.end:
+                            edge = Part.ArcOfCircle(
+                                makeVect(s.end), makeVect(s.mid),
+                                makeVect(s.start)).toShape()
+                        else:
+                            start = makeVect(s.start)
+                            middle = makeVect(s.mid)
+                            edge = Part.makeCircle(
+                                start.distanceToPoint(middle),
+                                (middle-start)/2)
+
+                        points = edge.discretize(
+                            Deflection=max(self.arc_fit_accuracy,
+                                           width * 0.02))
+                        if edge.Closed and points and points[0] != points[-1]:
+                            points.append(points[0])
+                        for p1, p2 in zip(points, points[1:]):
+                            if p1 != p2:
+                                faces.append(Part.Face(
+                                    makeThickLine(p1, p2, radius)))
+
+            shape = Part.makeCompound(faces)
+            objs = self._makeObject(
+                'Part::Feature', 'tracks_direct', 'direct', 'Shape', shape)
+            self.setColor(objs,'track')
+            self._popLog('tracks done')
+            fitView()
+            return objs
 
         if objs:
             objs = self._cutHoles(objs,holes,'tracks',fit_arcs=fit_arcs)
