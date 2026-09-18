@@ -3,7 +3,7 @@
 #****************************************************************************
 
 global tracks_version
-tracks_version = '2.7.1'
+tracks_version = '2.7.1-k10fix.20260918'
 
 import kicad_parser
 #import kicad_parser; import importlib; importlib.reload(kicad_parser)
