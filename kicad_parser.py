@@ -2382,7 +2382,7 @@ class KicadFcad:
             for s in ss:
                 if self.filterNets(s):
                     continue
-                if unquote(s.layer) == self.layer:
+                if not self.filterLayer(s):
                     if self.merge_tracks:
                         tracks[''][s.width].append((tp,s))
                     else:
@@ -2940,4 +2940,3 @@ def test(names=''):
         pcb.make(fuseCoppers=True)
         pcb.add_feature = False
         Part.show(pcb.make())
-
