@@ -2064,7 +2064,8 @@ class KicadFcad:
                                     fuse=True,fit_arcs=fit_arcs)
 
             if shape_type == 'face' and (
-                    not objs.isValid() or objs.Shape.isNull()):
+                    not objs.isValid() or objs.Shape.isNull()
+                    or not objs.Shape.isValid()):
                 self._log(
                     'combined pad area failed; using a direct Part compound',
                     level='warning')
