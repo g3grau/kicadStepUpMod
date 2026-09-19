@@ -434,7 +434,9 @@ def addtracks(fname = None):
         # <span style="color: #105e7d;">deep-sea blue</span></strong>, <strong><span style="color: #ff2f00;">Ferrari red</span></strong>, <strong><span style="color: #ffcc00;">sunshine yellow</span></strong>, <strong>slick black</strong>, <span style="color: #999999;"><strong>pure white</strong></span> and of course <strong><span style="color: #339966;">good</span></strong> <strong><span style="color: #339966;">ol’ green</span>
         # (r/255.0,g/255.0,b/255.0)
         pcb_col = pcb.colors
-        copper_col = pcb_col['copper'][0]
+        # Use the pad finish color for all imported copper. This keeps tracks
+        # and zones consistent with ENIG/gold-finished pads.
+        copper_col = pcb_col['pad'][0]
         pcb_col['track'][0] = copper_col
         pcb_col['zone'][0] = copper_col
         # print(pcb_col['track'][0])
