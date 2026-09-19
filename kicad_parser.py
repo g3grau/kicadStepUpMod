@@ -2069,9 +2069,28 @@ class KicadFcad:
                     'combined pad area failed; using a direct Part compound',
                     level='warning')
                 faces = []
+                repaired_faces = 0
+                skipped_faces = 0
                 for source in pad_sources:
                     if source.isValid() and not source.Shape.isNull():
-                        faces.extend(source.Shape.Faces)
+                        for face in source.Shape.Faces:
+                            if face.isValid():
+                                faces.append(face)
+                                continue
+                            try:
+                                repaired = Part.Face(face.OuterWire)
+                            except Exception:
+                                skipped_faces += 1
+                                continue
+                            if repaired.isNull() or not repaired.isValid():
+                                skipped_faces += 1
+                                continue
+                            faces.append(repaired)
+                            repaired_faces += 1
+                if repaired_faces or skipped_faces:
+                    self._log(
+                        'direct pad compound repaired {} faces, skipped {}',
+                        repaired_faces, skipped_faces, level='warning')
 
                 hole_source = None
                 if hasattr(cut_result, 'Sources'):
