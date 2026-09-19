@@ -159,10 +159,11 @@ The parser has small tests, but there is no regression fixture covering:
 - B.Cu graphic copper polygons;
 - the complete Add Tracks FreeCAD object hierarchy.
 
-The local environment does not provide `FreeCADCmd`, so geometry-level
-verification must be performed in the FreeCAD application or another FreeCAD
-runtime. Pure parser and coordinate-helper behavior can still be tested with
-ordinary Python.
+Geometry-level verification requires a FreeCAD runtime; ordinary Python can
+only exercise parser and coordinate-helper behavior. Extracted FreeCAD
+AppImages were used for the targeted geometry tests recorded below. The
+headless AppImage later became unable to initialize its bundled PySide module,
+so the final interactive end-to-end check remains necessary.
 
 ## 8. Recent FreeCAD development builds can fail in `Path.Area`
 
@@ -208,7 +209,8 @@ final placement, remains required in the interactive FreeCAD runtime.
 
 Severity: high with affected FreeCAD builds
 
-Status: fixed in commits `79bbf9f`, `cac81bd`, `b97aa8a`, and `8071af5`
+Status: fixed in commits `79bbf9f`, `cac81bd`, `b97aa8a`, `8071af5`,
+`3381cb1`, and `396aa9c`
 
 On the LNA board, three custom pads fail in `Path::FeatureArea` with the same
 `No parent edge found` FreeCAD regression as the tracks. The later
@@ -227,7 +229,16 @@ The fallback cuts drill openings one pad/via face at a time, considering only
 spatially overlapping drill solids. The targeted test produced 15 faces with
 inner wires. OpenCASCADE still rejected cuts on three overlapping custom-pad
 faces; those faces are retained uncut rather than dropping the pad collection.
-Full-board drill visibility still needs interactive validation.
+
+Full-board tests exposed a second failure mode: the final Part compound could
+be non-null while containing a few invalid faces, which poisoned the complete
+display shape. On `Hidra_RF_2x1_LIM`, 308 of 311 faces were already valid;
+rebuilding the three malformed faces from their outer wires made the complete
+311-face compound valid. The same fallback produced a valid 286-face compound
+on the PA board without losing a face. The importer now repairs individual
+invalid faces and also activates this fallback when the aggregate Shape itself
+is invalid, even if the document object reports valid. This last condition is
+needed with FreeCAD 1.1.3.
 
 ## 10. DNP is supported, but omission is opt-in
 
@@ -243,29 +254,65 @@ assembly-model choice: the PCB footprint and its copper pads remain present.
 For an assembly view, set the preference to `DNP;`. Making omission the
 unconditional default would be a policy change and has not been done here.
 
-## 11. LNA embedded-model checksum is inconsistent
+## 11. The embedded LNA STEP payload is itself mirrored
 
 Severity: medium
 
 Status: board-data issue; not changed in this repository
 
-The LNA footprint references `kicad-embed://LNA_CHIP_V4.step` with zero
-offset, unit scale, and zero XYZ rotation. There is no negative model scale or
-saved mirror transform. However, the footprint-local embedded-file record has
-checksum `E11296F1B4FD90F1F0C3F54A8D9A17EF`, while the board's global embedded
-payload for the same filename has checksum
-`828E967DEAEBEA55F3A3E6D75D1C0E12`.
+The KiCad board is a readable S-expression text file. Its embedded-file data
+is Base64-wrapped Zstandard data and can be extracted without KiCad. The model
+entry uses zero offset, unit scale, and zero XYZ rotation; there is no negative
+scale or hidden mirror transform in the footprint.
 
-That stale reference is consistent with KiCad showing a corrected cached
-model immediately after an update but returning to another embedded payload
-after reopening. The durable repair is to remove and re-embed the corrected
-model, or preferably reference a project-local STEP file and update the
-footprint library. A footprint-library update that reports "no change" does
-not replace an embedded payload whose URI and footprint definition are
-otherwise unchanged.
+The orphan board payload `LNA_CHIP_V4.step` and the working linked STEP were
+both loaded directly into FreeCAD. They have the same 151 parts, 380 solids,
+volume, and X/Z bounds, but their Y centers have equal and opposite signs.
+Their SHA-1 hashes and file sizes also differ. The embedded STEP geometry is
+therefore actually mirrored across Y; this is not a kicadStepUp transform or
+an obscure inversion flag. Switching the footprint to a linked model does not
+automatically remove the old global embedded payload.
+
+The durable repair is to remove the orphan in KiCad's embedded-file manager
+and reference one project-local model, preferably through `${KIPRJMOD}`. A
+new filename can avoid stale name-based caches, but renaming alone does not
+correct a bad embedded payload. The LMT01 board data should be cleaned in the
+same way: it currently contains an obsolete absolute `/home/arif/...` path as
+well as an embedded model entry, while a usable local STEP exists in the
+project tree.
+
+## 12. Copper appearance and helper visibility were inconsistent
+
+Severity: low
+
+Status: fixed in commits `d382979` and `e416a34`
+
+Tracks and zones used the generic copper color while pads used the configured
+pad-finish color. All imported copper now uses the pad color, which preserves
+the intended gold-finish appearance.
+
+Hole wires and extruded drill cutters are construction geometry, but some
+fallback paths left their objects visible. Newly created helper objects with
+the known hole/drill names are now hidden at the end of Add Tracks. The holes
+remain present in the object tree for diagnostics and are not deleted.
+
+## 13. FreeCAD 1.1.3 avoids the new CAM parent-edge regression
+
+Severity: informational
+
+Status: comparison completed; compatibility fallback retained
+
+An exact LIM full-pad test with FreeCAD 1.1.3 did not emit the FreeCAD 26.3
+`No parent edge found` error and returned the native `Path::FeatureArea`.
+That makes 1.1.3 a useful workaround for the September 2026 CAM regression.
+However, its aggregate pad shape was still invalid on this board: 236 of 242
+faces were individually valid, and rebuilding the malformed faces produced a
+valid 242-face compound. The importer therefore keeps the direct Part repair
+path for both versions rather than relying on CAM behavior alone.
 
 ## Proposed incremental order
 
-1. Validate pad and zone drill openings in the interactive FreeCAD runtime.
+1. Validate repaired pads, hidden hole helpers, and zone drill openings in the
+   interactive FreeCAD runtime using marker `k10fix8.20260919`.
 2. Consolidate graphic copper into the normal per-layer copper path.
 3. Add KiCad 8, 9, and 10 regression fixtures and FreeCAD integration tests.
