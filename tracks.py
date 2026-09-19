@@ -356,6 +356,8 @@ def addtracks(fname = None):
     filename = fname
     #importDXF.open(os.path.join(dirname,filename))
     if len(fname) > 0:
+        objects_before = set(
+            obj.Name for obj in FreeCAD.ActiveDocument.Objects)
         start_time=current_milli_time()
         last_pcb_path=os.path.dirname(fname)
         path, ftname = os.path.split(fname)
@@ -961,6 +963,21 @@ def addtracks(fname = None):
                                     msg)
             diag.setWindowModality(QtCore.Qt.ApplicationModal)
             diag.exec_()
+
+        hidden_hole_helpers = 0
+        for obj in FreeCAD.ActiveDocument.Objects:
+            if obj.Name in objects_before or not hasattr(obj, 'ViewObject'):
+                continue
+            name = obj.Name.lower()
+            label = obj.Label.lower()
+            if (name.startswith(('hole_', 'holes', 'extrude_drills')) or
+                    label.startswith(('holes', 'solid_drills'))):
+                obj.ViewObject.Visibility = False
+                hidden_hole_helpers += 1
+        if hidden_hole_helpers:
+            FreeCAD.Console.PrintMessage(
+                '  hidden hole helper objects: {}\n'.format(
+                    hidden_hole_helpers))
         say_time()
         
         if FreeCAD.ActiveDocument is not None:
