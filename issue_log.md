@@ -1,3 +1,11 @@
+# Branch note
+
+**Experimental fork:** This branch contains KiCad 10 and FreeCAD 26.3 copper-import compatibility fixes. See [issue_log.md](issue_log.md) for implemented changes, validation results, and known limitations. Developed with AI assistance; this is not an upstream release.
+
+Main issue to fix was that imported tracks went to a different location than the imported board (at least if the board moved the grid origin). 
+Due to a chain of issues this fix became a bit longer until it worked: kicad 10 changed the layer ordering/naming, freecad 26.3 currently has some issues in the CAM, and some PCB features could break the entire import flow. 
+
+
 # KiCad copper import issue log
 
 This log records the findings from investigating copper import with

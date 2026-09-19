@@ -1,3 +1,8 @@
+# Branch note
+
+**Experimental fork:** This branch contains KiCad 10 and FreeCAD 26.3 copper-import compatibility fixes. See [issue_log.md](issue_log.md) for implemented changes, validation results, and known limitations. Developed with AI assistance; this is not an upstream release.
+
+
 kicadStepUp-WB
 ==============
 
