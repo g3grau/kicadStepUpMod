@@ -5,6 +5,7 @@
 Main issue to fix was that imported tracks went to a different location than the imported board (at least if the board moved the grid origin). 
 Due to a chain of issues this fix became a bit longer until it worked: kicad 10 changed the layer ordering/naming, freecad 26.3 currently has some issues in the CAM, and some PCB features could break the entire import flow. 
 
+![CoB with chip in cavity](images/CoB_RF_assembly.png)
 
 # KiCad copper import issue log
 
@@ -285,7 +286,7 @@ The durable repair is to remove the orphan in KiCad's embedded-file manager
 and reference one project-local model, preferably through `${KIPRJMOD}`. A
 new filename can avoid stale name-based caches, but renaming alone does not
 correct a bad embedded payload. The LMT01 board data should be cleaned in the
-same way: it currently contains an obsolete absolute `/home/arif/...` path as
+same way: it currently contains an obsolete absolute `/home/...` path as
 well as an embedded model entry, while a usable local STEP exists in the
 project tree.
 
